@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "forge-std/Script.sol";
 import "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "../src/Stablecoin.sol";
+import "../src/StablecoinV2.sol";
 
 contract DeployStablecoinScript is Script {
     string internal constant NAME = "$ Token";
@@ -16,7 +16,7 @@ contract DeployStablecoinScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        Stablecoin impl = new Stablecoin();
+        StablecoinV2 impl = new StablecoinV2();
         ProxyAdmin proxyAdmin = new ProxyAdmin();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(impl),

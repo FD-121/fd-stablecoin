@@ -5,9 +5,8 @@ pragma solidity ^0.8.0;
 import "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/contracts/security/PausableUpgradeable.sol";
-import "./extensions/EIP7598Extension.sol";
 
-contract Stablecoin is ERC20PermitUpgradeable, Ownable2StepUpgradeable, PausableUpgradeable, EIP7598Extension {
+contract Stablecoin is ERC20PermitUpgradeable, Ownable2StepUpgradeable, PausableUpgradeable {
 
     mapping(address => bool) public frozen;
 
@@ -97,7 +96,7 @@ contract Stablecoin is ERC20PermitUpgradeable, Ownable2StepUpgradeable, Pausable
      * @param to Destination address
      * @param amount Transfer amount
      */
-    function _transfer(address from, address to, uint256 amount) internal override(ERC20Upgradeable, EIP7598Extension) whenNotPaused notFrozen(from) notFrozen(to) {
+    function _transfer(address from, address to, uint256 amount) internal override whenNotPaused notFrozen(from) notFrozen(to) {
         super._transfer(from, to, amount);
     }
 

@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "../src/Stablecoin.sol";
+import "../src/StablecoinV2.sol";
 
 contract DeployStablecoinTest is Test {
     uint256 internal ownerPrivateKey;
@@ -23,7 +23,7 @@ contract DeployStablecoinTest is Test {
         vm.startPrank(owner);
         
         // refer to script/DeployStablecoin.s.sol
-        impl = new Stablecoin();
+        impl = new StablecoinV2();
         proxyAdmin = new ProxyAdmin();
         proxy = new TransparentUpgradeableProxy(
             address(impl),

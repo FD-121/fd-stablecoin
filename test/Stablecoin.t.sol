@@ -96,6 +96,21 @@ contract StablecoinTest is Test {
         assertEq(token.totalSupply(), 11e18);
     }
 
+    function test_MintTo() public {
+        vm.prank(owner);
+        token.mint(spender, 10e18);
+
+        assertEq(token.balanceOf(spender), 10e18);
+        assertEq(token.totalSupply(), 11e18);
+
+        vm.prank(owner);
+        token.freeze(spender);
+        
+        vm.prank(owner);
+        vm.expectRevert("Account is frozen");
+        token.mint(spender, 1e18); // source freeze
+    }
+
     function testRevert_InvalidMintOwner() public {
         vm.expectRevert("Ownable: caller is not the owner");
         token.mint(10e18);
@@ -465,7 +480,7 @@ contract StablecoinTest is Test {
         assertEq(token.allowance(owner, spender), type(uint256).max);
     }
 
-    function testFail_InvalidAllowance() public {
+    function test_RevertInvalidAllowance() public {
         SigUtils.Permit memory permit = SigUtils.Permit({
             owner: owner,
             spender: spender,
@@ -480,10 +495,11 @@ contract StablecoinTest is Test {
         token.permit(permit.owner, permit.spender, permit.value, permit.deadline, v, r, s);
 
         vm.prank(spender);
+        vm.expectRevert("ERC20: insufficient allowance");
         token.transferFrom(owner, spender, 1e18); // attempt to transfer 1 token
     }
 
-    function testFail_InvalidBalance() public {
+    function test_RevertInvalidBalance() public {
         SigUtils.Permit memory permit = SigUtils.Permit({
             owner: owner,
             spender: spender,
@@ -498,6 +514,7 @@ contract StablecoinTest is Test {
         token.permit(permit.owner, permit.spender, permit.value, permit.deadline, v, r, s);
 
         vm.prank(spender);
+        vm.expectRevert("ERC20: transfer amount exceeds balance");
         token.transferFrom(owner, spender, 2e18); // attempt to transfer 2 tokens (owner only owns 1)
     }
 }

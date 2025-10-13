@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
-import "../src/Stablecoin.sol";
+import "../src/StablecoinV2.sol";
 import "./utils/MockERC20.sol";
 
 contract EIP7598Test is Test {
-    Stablecoin internal token;
+    StablecoinV2 internal token;
 
     uint256 internal ownerPrivateKey;
     uint256 internal spenderPrivateKey;
@@ -32,7 +32,7 @@ contract EIP7598Test is Test {
 
     function test_TransferWithAuthorization() public {
         uint256 amount = 100e18;
-        uint256 validAfter = block.timestamp;
+        uint256 validAfter = block.timestamp - 1 seconds;
         uint256 validBefore = block.timestamp + 1 hours;
         bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(1)));
 
@@ -54,8 +54,7 @@ contract EIP7598Test is Test {
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
 
         // Sign the digest
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory signature = sign(digest);
 
         // Execute transfer with authorization
         uint256 ownerBalanceBefore = token.balanceOf(owner);
@@ -72,10 +71,108 @@ contract EIP7598Test is Test {
         assertTrue(token.authorizationState(owner, nonce));
     }
 
+     function test_TransferWithAuthorizationVRS() public {
+        uint256 amount = 100e18;
+        uint256 validAfter = block.timestamp - 1 seconds;
+        uint256 validBefore = block.timestamp + 1 hours;
+        bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(1)));
+
+        // Build EIP-712 struct hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"),
+                owner,
+                recipient,
+                amount,
+                validAfter,
+                validBefore,
+                nonce
+            )
+        );
+
+        // Get domain separator and build digest
+        bytes32 domainSeparator = token.DOMAIN_SEPARATOR();
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        // Sign the digest
+        (uint8 v, bytes32 r, bytes32 s) = signVRS(digest);
+
+        // Execute transfer with authorization
+        uint256 ownerBalanceBefore = token.balanceOf(owner);
+        uint256 recipientBalanceBefore = token.balanceOf(recipient);
+
+        vm.prank(spender);
+        token.transferWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, v, r, s);
+
+        // Verify balances
+        assertEq(token.balanceOf(owner), ownerBalanceBefore - amount);
+        assertEq(token.balanceOf(recipient), recipientBalanceBefore + amount);
+
+        // Verify nonce is used
+        assertTrue(token.authorizationState(owner, nonce));
+    }
+
+    function test_ReceiveWithAuthorization() public {
+        uint256 amount = 100e18;
+        uint256 validAfter = block.timestamp - 1 seconds;
+        uint256 validBefore = block.timestamp + 1 hours;
+        bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(1)));
+
+        // Build EIP-712 struct hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("ReceiveWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"),
+                owner,
+                recipient,
+                amount,
+                validAfter,
+                validBefore,
+                nonce
+            )
+        );
+
+        // Get domain separator and build digest
+        bytes32 domainSeparator = token.DOMAIN_SEPARATOR();
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        // Sign the digest
+        bytes memory signature = sign(digest);
+
+        // Execute transfer with authorization
+        uint256 ownerBalanceBefore = token.balanceOf(owner);
+        uint256 recipientBalanceBefore = token.balanceOf(recipient);
+
+        //even if payer can not use authorization
+        vm.prank(owner);
+        vm.expectRevert("Caller must be the payee");
+        token.receiveWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, signature);
+        
+        //only payee can use authorization
+        vm.prank(recipient);
+        token.receiveWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, signature);
+
+        // Verify balances
+        assertEq(token.balanceOf(owner), ownerBalanceBefore - amount);
+        assertEq(token.balanceOf(recipient), recipientBalanceBefore + amount);
+
+        // Verify nonce is used
+        assertTrue(token.authorizationState(owner, nonce));
+    }
+
+    function sign(bytes32 digest) internal view returns (bytes memory) {
+         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        return signature;
+    }
+
+    function signVRS(bytes32 digest) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+        return vm.sign(ownerPrivateKey, digest);
+    }
+
     function testRevert_TransferWithAuthorization_Expired() public {
         uint256 amount = 100e18;
-        uint256 validAfter = block.timestamp - 2 hours;
-        uint256 validBefore = block.timestamp - 1 hours; // Already expired
+        uint256 validAfter = block.timestamp - 1 seconds;
+        uint256 validBefore = block.timestamp; // Already expired
         bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(2)));
 
         // Build and sign authorization
@@ -105,14 +202,15 @@ contract EIP7598Test is Test {
 
     function testRevert_TransferWithAuthorization_NotYetValid() public {
         uint256 amount = 100e18;
-        uint256 validAfter = block.timestamp + 1 hours; // Not yet valid
-        uint256 validBefore = block.timestamp + 2 hours;
+        uint256 validAfter = block.timestamp + 1 seconds; // Not yet valid
+        uint256 validBefore = block.timestamp + 2 seconds;
         bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(3)));
 
+        console.log("validAfter:" ,  validAfter);
         // Build and sign authorization
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAf ter,uint256 validBefore,bytes32 nonce)"),
+                keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"),
                 owner,
                 recipient,
                 amount,
@@ -136,7 +234,7 @@ contract EIP7598Test is Test {
 
     function testRevert_TransferWithAuthorization_AlreadyUsed() public {
         uint256 amount = 50e18;
-        uint256 validAfter = block.timestamp;
+        uint256 validAfter = block.timestamp  - 1 seconds; // Not yet valid;
         uint256 validBefore = block.timestamp + 1 hours;
         bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(4)));
 
@@ -191,7 +289,7 @@ contract EIP7598Test is Test {
 
     function testRevert_TransferWithAuthorization_Frozen() public {
         uint256 amount = 100e18;
-        uint256 validAfter = block.timestamp;
+        uint256 validAfter = block.timestamp - 1 seconds;
         uint256 validBefore = block.timestamp + 1 hours;
         bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(7)));
 
@@ -226,7 +324,7 @@ contract EIP7598Test is Test {
 
     function testRevert_TransferWithAuthorization_Paused() public {
         uint256 amount = 100e18;
-        uint256 validAfter = block.timestamp;
+        uint256 validAfter = block.timestamp - 1 seconds;
         uint256 validBefore = block.timestamp + 1 hours;
         bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(8)));
 
