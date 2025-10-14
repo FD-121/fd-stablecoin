@@ -181,7 +181,6 @@ contract StablecoinV2 is Stablecoin {
             SignatureCheckerUpgradeable.isValidSignatureNow(from, digest, signature),
             "Invalid signature"
         );
-        //_validateSignature(from, digest, signature);
 
         // Mark authorization as used
         _authorizationStates[from][nonce] = true;

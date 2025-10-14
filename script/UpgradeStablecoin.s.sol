@@ -28,9 +28,9 @@ contract UpgradeStablecoinScript is Script {
         );
         console.logBytes(initData);
 
-        ProxyAdmin admin = ProxyAdmin(PROXY_ADMIN);
-        TransparentUpgradeableProxy proxyInstance = TransparentUpgradeableProxy(payable(PROXY));
-        admin.upgradeAndCall(proxyInstance, address(newImpl), initData);
+        // ProxyAdmin admin = ProxyAdmin(PROXY_ADMIN);
+        // TransparentUpgradeableProxy proxyInstance = TransparentUpgradeableProxy(payable(PROXY));
+        // admin.upgradeAndCall(proxyInstance, address(newImpl), initData);
 
         vm.stopBroadcast();
     }
