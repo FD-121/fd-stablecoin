@@ -19,7 +19,6 @@ contract Stablecoin is ERC20PermitUpgradeable, Ownable2StepUpgradeable, Pausable
         __Context_init();
         __ERC20_init(_name, _symbol);
         __ERC20Permit_init(_name);
-        __EIP712_init(_name, "1");
         __Ownable2Step_init();
         __Pausable_init();
     }

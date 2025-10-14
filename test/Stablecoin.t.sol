@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "forge-std/Test.sol";
 import "./utils/MockERC20.sol";
 import "./utils/SigUtils.sol";
@@ -22,7 +24,14 @@ contract StablecoinTest is Test {
         spender = vm.addr(spenderPrivateKey);
 
         vm.startPrank(owner);
-        token = new MockERC20();
+        StablecoinV2 impl = new StablecoinV2();
+        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(impl),
+            address(proxyAdmin),
+            abi.encodeWithSignature("initializeV2(string,string)", "Mock Name", "MKT")
+        );
+        token = MockERC20(address(proxy));
         sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
 
         token.mint(1e18);

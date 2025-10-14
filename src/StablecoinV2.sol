@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import "openzeppelin-contracts-upgradeable/contracts/utils/cryptography/ECDSAUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/contracts/utils/AddressUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/contracts/utils/cryptography/SignatureCheckerUpgradeable.sol";
-import "./interfaces/IERC1271.sol";
 import "./libraries/EIP7598Constants.sol";
 import "./Stablecoin.sol";
 
@@ -21,6 +20,27 @@ contract StablecoinV2 is Stablecoin {
     // Events
     event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
     event AuthorizationCanceled(address indexed authorizer, bytes32 indexed nonce);
+
+    /**
+     * @dev Disable initializers for the implementation contract
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initialize the contract
+     * @param _name Token name
+     * @param _symbol Token symbol
+     */   
+    function initializeV2(string memory _name, string memory _symbol) public initializer {
+        __Context_init();
+        __ERC20_init(_name, _symbol);
+        __ERC20Permit_init(_name);
+        __EIP712_init(_name, "1");
+        __Ownable2Step_init();
+        __Pausable_init();
+    }
 
     /**
      * @dev See {ERC20-_mint}.

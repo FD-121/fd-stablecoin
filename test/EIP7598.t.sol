@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "forge-std/Test.sol";
 import "../src/StablecoinV2.sol";
 import "./utils/MockERC20.sol";
@@ -23,7 +25,14 @@ contract EIP7598Test is Test {
         recipient = address(0x3);
 
         vm.startPrank(owner);
-        token = new MockERC20();
+        StablecoinV2 impl = new StablecoinV2();
+        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(impl),
+            address(proxyAdmin),
+            abi.encodeWithSignature("initializeV2(string,string)", "Mock Name", "MKT")
+        );
+        token = MockERC20(address(proxy));
 
         // Mint some tokens to owner
         token.mint(1000e18);

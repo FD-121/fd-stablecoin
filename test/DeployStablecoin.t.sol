@@ -10,8 +10,8 @@ import "../src/StablecoinV2.sol";
 contract DeployStablecoinTest is Test {
     uint256 internal ownerPrivateKey;
     address internal owner;
-    string internal constant NAME = "$ Token";
-    string internal constant SYMBOL = "$";
+    string internal constant NAME = "Mock Token";
+    string internal constant SYMBOL = "MKT";
     Stablecoin internal impl;
     ProxyAdmin internal proxyAdmin;
     TransparentUpgradeableProxy internal proxy;
@@ -28,9 +28,8 @@ contract DeployStablecoinTest is Test {
         proxy = new TransparentUpgradeableProxy(
             address(impl),
             address(proxyAdmin),
-            abi.encodeWithSignature("initialize(string,string)", NAME, SYMBOL)
+            abi.encodeWithSignature("initializeV2(string,string)", NAME, SYMBOL)
         );
-        impl.initialize(NAME, SYMBOL);
 
         vm.stopPrank();
     }
@@ -41,7 +40,7 @@ contract DeployStablecoinTest is Test {
         assertEq(proxyAdmin.getProxyImplementation(proxy), address(impl));
         assertEq(keccak256(abi.encodePacked(Stablecoin(address(proxy)).name())), keccak256(abi.encodePacked(NAME)));
         assertEq(keccak256(abi.encodePacked(Stablecoin(address(proxy)).symbol())), keccak256(abi.encodePacked(SYMBOL)));
-        assertEq(keccak256(abi.encodePacked(impl.name())), keccak256(abi.encodePacked(NAME)));
-        assertEq(keccak256(abi.encodePacked(impl.symbol())), keccak256(abi.encodePacked(SYMBOL)));
+        assertEq(keccak256(abi.encodePacked(impl.name())), keccak256(abi.encodePacked("")));
+        assertEq(keccak256(abi.encodePacked(impl.symbol())), keccak256(abi.encodePacked("")));
     }
 }
