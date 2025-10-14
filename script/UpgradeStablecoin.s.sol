@@ -19,21 +19,18 @@ contract UpgradeStablecoinScript is Script {
     function run() external {
         vm.startBroadcast();
 
-         // 1️⃣ 部署新的逻辑合约
         StablecoinV2 newImpl = new StablecoinV2();
         console.log("New Implementation:", address(newImpl));
 
-        // 2️⃣ 构造 initializeV2 的 calldata
         bytes memory initData = abi.encodeWithSelector(
             StablecoinV2.initializeV2.selector,
             NAME
         );
         console.logBytes(initData);
 
-        // 3️⃣ 调用 upgradeAndCall
-        // ProxyAdmin admin = ProxyAdmin(PROXY_ADMIN);
-        // TransparentUpgradeableProxy proxyInstance = TransparentUpgradeableProxy(payable(PROXY));
-        // admin.upgradeAndCall(proxyInstance, address(newImpl), initData);
+        ProxyAdmin admin = ProxyAdmin(PROXY_ADMIN);
+        TransparentUpgradeableProxy proxyInstance = TransparentUpgradeableProxy(payable(PROXY));
+        admin.upgradeAndCall(proxyInstance, address(newImpl), initData);
 
         vm.stopBroadcast();
     }
