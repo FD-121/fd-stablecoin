@@ -23,7 +23,8 @@ contract DeployStablecoinScript is Script {
             address(proxyAdmin),
             abi.encodeWithSignature("initialize(string,string)", NAME, SYMBOL)
         );
-
+        impl.initialize(NAME, SYMBOL); // prevent uninitialized implementation
+        
         vm.stopBroadcast();
     }
 }
