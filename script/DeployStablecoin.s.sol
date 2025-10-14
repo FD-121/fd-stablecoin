@@ -21,7 +21,7 @@ contract DeployStablecoinScript is Script {
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(impl),
             address(proxyAdmin),
-            abi.encodeWithSignature("initializeV2(string,string)", NAME, SYMBOL)
+            abi.encodeWithSignature("initialize(string,string)", NAME, SYMBOL)
         );
 
         vm.stopBroadcast();
