@@ -22,7 +22,7 @@ contract Stablecoin is ERC20PermitUpgradeable, Ownable2StepUpgradeable, Pausable
         __Ownable2Step_init();
         __Pausable_init();
     }
-
+    
     /**
      * @dev Throws if account is frozen.
      */
@@ -31,7 +31,7 @@ contract Stablecoin is ERC20PermitUpgradeable, Ownable2StepUpgradeable, Pausable
         _;
     }
 
-    /**
+    /** 
      * @dev See {ERC20-_mint}.
      * @param amount Mint amount
      * @return True if successful
@@ -54,7 +54,7 @@ contract Stablecoin is ERC20PermitUpgradeable, Ownable2StepUpgradeable, Pausable
         emit Burn(_msgSender(), _msgSender(), amount);
         return true;
     }
-
+    
     /**
      * @dev Adds account to frozen state.
      * Can only be called by the current owner.
