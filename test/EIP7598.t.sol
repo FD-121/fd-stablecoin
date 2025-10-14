@@ -8,6 +8,9 @@ import "../src/StablecoinV2.sol";
 import "./utils/MockERC20.sol";
 
 contract EIP7598Test is Test {
+    string internal constant NAME = "First Digital USD";
+    string internal constant SYMBOL = "FDUSD";
+
     StablecoinV2 internal token;
 
     uint256 internal ownerPrivateKey;
@@ -24,18 +27,39 @@ contract EIP7598Test is Test {
         spender = vm.addr(spenderPrivateKey);
         recipient = address(0x3);
 
+        deployAndUpgradeSmartContract();
+
         vm.startPrank(owner);
-        StablecoinV2 impl = new StablecoinV2();
+        // Mint some tokens to owner
+        token.mint(1000e18);
+        vm.stopPrank();
+    }
+
+    function deployAndUpgradeSmartContract() internal {
+        vm.startPrank(owner);
+
+        Stablecoin impl = new Stablecoin();
         ProxyAdmin proxyAdmin = new ProxyAdmin();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(impl),
             address(proxyAdmin),
-            abi.encodeWithSignature("initializeV2(string,string)", "Mock Name", "MKT")
+            abi.encodeWithSignature("initialize(string,string)", NAME, SYMBOL)
         );
+
+        StablecoinV2 newImpl = new StablecoinV2();
+        console.log("New Implementation:", address(newImpl));
+
+        // 2️⃣ 构造 initializeV2 的 calldata
+        bytes memory initData = abi.encodeWithSelector(
+            StablecoinV2.initializeV2.selector,
+            NAME
+        );
+
+        // 3️⃣ 调用 upgradeAndCall
+        proxyAdmin.upgradeAndCall(proxy, address(newImpl), initData);
+        
         token = MockERC20(address(proxy));
 
-        // Mint some tokens to owner
-        token.mint(1000e18);
         vm.stopPrank();
     }
 

@@ -31,15 +31,9 @@ contract StablecoinV2 is Stablecoin {
     /**
      * @dev Initialize the contract
      * @param _name Token name
-     * @param _symbol Token symbol
      */   
-    function initializeV2(string memory _name, string memory _symbol) public initializer {
-        __Context_init();
-        __ERC20_init(_name, _symbol);
-        __ERC20Permit_init(_name);
+    function initializeV2(string memory _name) public reinitializer(2) {  
         __EIP712_init(_name, "1");
-        __Ownable2Step_init();
-        __Pausable_init();
     }
 
     /**

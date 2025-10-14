@@ -8,11 +8,13 @@ import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeabl
 import "../src/StablecoinV2.sol";
 
 contract DeployStablecoinTest is Test {
+
+    string internal constant NAME = "First Digital USD";
+    string internal constant SYMBOL = "FDUSD";
     uint256 internal ownerPrivateKey;
     address internal owner;
-    string internal constant NAME = "Mock Token";
-    string internal constant SYMBOL = "MKT";
     Stablecoin internal impl;
+    Stablecoin internal newImpl;
     ProxyAdmin internal proxyAdmin;
     TransparentUpgradeableProxy internal proxy;
 
@@ -20,16 +22,31 @@ contract DeployStablecoinTest is Test {
         ownerPrivateKey = 0xA11CE;
         owner = vm.addr(ownerPrivateKey);
 
+        deployAndUpgradeSmartContract();
+    }
+
+    function deployAndUpgradeSmartContract() internal {
         vm.startPrank(owner);
-        
-        // refer to script/DeployStablecoin.s.sol
-        impl = new StablecoinV2();
+
+        impl = new Stablecoin();
         proxyAdmin = new ProxyAdmin();
         proxy = new TransparentUpgradeableProxy(
             address(impl),
             address(proxyAdmin),
-            abi.encodeWithSignature("initializeV2(string,string)", NAME, SYMBOL)
+            abi.encodeWithSignature("initialize(string,string)", NAME, SYMBOL)
         );
+
+        newImpl = new StablecoinV2();
+        console.log("New Implementation:", address(newImpl));
+
+        // 2️⃣ 构造 initializeV2 的 calldata
+        bytes memory initData = abi.encodeWithSelector(
+            StablecoinV2.initializeV2.selector,
+            NAME
+        );
+
+        // 3️⃣ 调用 upgradeAndCall
+        proxyAdmin.upgradeAndCall(proxy, address(newImpl), initData);
 
         vm.stopPrank();
     }
@@ -37,10 +54,10 @@ contract DeployStablecoinTest is Test {
     function test_Initialize() public {
         assertEq(proxyAdmin.owner(), owner);
         assertEq(proxyAdmin.getProxyAdmin(proxy), address(proxyAdmin));
-        assertEq(proxyAdmin.getProxyImplementation(proxy), address(impl));
+        assertEq(proxyAdmin.getProxyImplementation(proxy), address(newImpl));
         assertEq(keccak256(abi.encodePacked(Stablecoin(address(proxy)).name())), keccak256(abi.encodePacked(NAME)));
         assertEq(keccak256(abi.encodePacked(Stablecoin(address(proxy)).symbol())), keccak256(abi.encodePacked(SYMBOL)));
-        assertEq(keccak256(abi.encodePacked(impl.name())), keccak256(abi.encodePacked("")));
-        assertEq(keccak256(abi.encodePacked(impl.symbol())), keccak256(abi.encodePacked("")));
+        assertEq(keccak256(abi.encodePacked(newImpl.name())), keccak256(abi.encodePacked("")));
+        assertEq(keccak256(abi.encodePacked(newImpl.symbol())), keccak256(abi.encodePacked("")));
     }
 }
