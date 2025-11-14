@@ -26,7 +26,7 @@ contract StablecoinV2 is Stablecoin {
     bool public _eip7598EnableFlag;
 
     /**
-     * @dev Throws if account is frozen.
+     * @dev Throws if eip7598 is disabled.
      */
     modifier eip7598Enabled() {
         require(_eip7598EnableFlag, "EIP7598 is disalbed");
