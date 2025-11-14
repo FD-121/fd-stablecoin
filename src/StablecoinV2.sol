@@ -20,7 +20,18 @@ contract StablecoinV2 is Stablecoin {
     // Events
     event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
     event AuthorizationCanceled(address indexed authorizer, bytes32 indexed nonce);
+    event EIP7598Enabled();
+    event EIP7598Disabled();
 
+    bool public _eip7598EnableFlag;
+
+    /**
+     * @dev Throws if account is frozen.
+     */
+    modifier eip7598Enabled() {
+        require(_eip7598EnableFlag, "EIP7598 is disalbed");
+        _;
+    }
     /**
      * @dev Disable initializers for the implementation contract
      */
@@ -34,6 +45,24 @@ contract StablecoinV2 is Stablecoin {
      */   
     function initializeV2(string memory _name) public reinitializer(2) {  
         __EIP712_init(_name, "1");
+    }
+
+    /**
+    *  @dev enable eip7598 support
+     * Can only be called by the owner.
+     */
+    function enableEIP7598() external onlyOwner {
+        emit EIP7598Enabled();
+        _eip7598EnableFlag = true;
+    }
+
+    /**
+    *  @dev disable eip7598 support
+     * Can only be called by the owner.
+     */
+    function disableEIP7598() external onlyOwner {
+        emit EIP7598Disabled();
+        _eip7598EnableFlag = false;
     }
 
     /**
@@ -67,7 +96,7 @@ contract StablecoinV2 is Stablecoin {
         uint256 validBefore,
         bytes32 nonce,
         bytes memory signature
-    ) external {
+    ) external eip7598Enabled {
         _transferOrReceiveWithAuthorization(EIP7598Constants.TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce, signature);
     }
 
@@ -93,7 +122,7 @@ contract StablecoinV2 is Stablecoin {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external {
+    ) external eip7598Enabled {
         _transferOrReceiveWithAuthorization(EIP7598Constants.TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce, abi.encodePacked(r, s, v));
     }
 
@@ -118,7 +147,7 @@ contract StablecoinV2 is Stablecoin {
         uint256 validBefore,
         bytes32 nonce,
         bytes memory signature
-    ) external {
+    ) external eip7598Enabled {
         require(msg.sender == to, "Caller must be the payee");
         _transferOrReceiveWithAuthorization(EIP7598Constants.RECEIVE_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce, signature);
     }
