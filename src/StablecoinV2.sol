@@ -16,6 +16,8 @@ contract StablecoinV2 is Stablecoin {
     // State variable for tracking used authorization nonces
     // This uses bytes32 nonces to allow for flexible nonce strategies
     mapping(address => mapping(bytes32 => bool)) private _authorizationStates;
+    
+    bool public eip7598EnableFlag;
 
     // Events
     event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
@@ -23,13 +25,11 @@ contract StablecoinV2 is Stablecoin {
     event EIP7598Enabled();
     event EIP7598Disabled();
 
-    bool public _eip7598EnableFlag;
-
     /**
      * @dev Throws if eip7598 is disabled.
      */
     modifier eip7598Enabled() {
-        require(_eip7598EnableFlag, "EIP7598 is disalbed");
+        require(eip7598EnableFlag, "EIP7598 is disalbed");
         _;
     }
     /**
@@ -45,6 +45,7 @@ contract StablecoinV2 is Stablecoin {
      */   
     function initializeV2(string memory _name) public reinitializer(2) {  
         __EIP712_init(_name, "1");
+        eip7598EnableFlag = true;
     }
 
     /**
@@ -53,7 +54,7 @@ contract StablecoinV2 is Stablecoin {
      */
     function enableEIP7598() external onlyOwner {
         emit EIP7598Enabled();
-        _eip7598EnableFlag = true;
+        eip7598EnableFlag = true;
     }
 
     /**
@@ -62,7 +63,7 @@ contract StablecoinV2 is Stablecoin {
      */
     function disableEIP7598() external onlyOwner {
         emit EIP7598Disabled();
-        _eip7598EnableFlag = false;
+        eip7598EnableFlag = false;
     }
 
     /**

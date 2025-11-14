@@ -309,6 +309,7 @@ contract EIP7598Test is Test {
 
         // Verify nonce is marked as used
         assertTrue(token.authorizationState(owner, nonce));
+
     }
 
     function testRevert_CancelAuthorization_NotAuthorizer() public {
@@ -389,4 +390,102 @@ contract EIP7598Test is Test {
         vm.expectRevert("Pausable: paused");
         token.transferWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, signature);
     }
+
+    function testRevert_TransferWithAuthorization_EIP7598Disabled() public {
+        uint256 amount = 100e18;
+        uint256 validAfter = block.timestamp - 1 seconds;
+        uint256 validBefore = block.timestamp + 1 hours;
+        bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(9)));
+
+        // Build and sign authorization
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"),
+                owner,
+                recipient,
+                amount,
+                validAfter,
+                validBefore,
+                nonce
+            )
+        );
+
+        bytes32 domainSeparator = token.DOMAIN_SEPARATOR();
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // disable EIP7598
+        vm.prank(owner);
+        token.disableEIP7598();
+
+        // Attempt transfer - should fail because account is frozen
+        vm.prank(spender);
+        vm.expectRevert("EIP7598 is disalbed");
+        token.transferWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, signature);
+    }
+
+
+    function testRevert_ReceiveWithAuthorization_EIP7598Disabled() public {
+        uint256 amount = 100e18;
+        uint256 validAfter = block.timestamp - 1 seconds;
+        uint256 validBefore = block.timestamp + 1 hours;
+        bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(10)));
+
+        // Build EIP-712 struct hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("ReceiveWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"),
+                owner,
+                recipient,
+                amount,
+                validAfter,
+                validBefore,
+                nonce
+            )
+        );
+
+        // Get domain separator and build digest
+        bytes32 domainSeparator = token.DOMAIN_SEPARATOR();
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+
+        // Sign the digest
+        bytes memory signature = sign(digest);
+
+        // Execute transfer with authorization
+        uint256 ownerBalanceBefore = token.balanceOf(owner);
+        uint256 recipientBalanceBefore = token.balanceOf(recipient);
+
+        // disable EIP7598
+        vm.prank(owner);
+        token.disableEIP7598();
+
+        //even if payee can not use authorization
+        vm.prank(recipient);
+        vm.expectRevert("EIP7598 is disalbed");
+        token.receiveWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, signature);
+
+        // Verify balances
+        assertEq(token.balanceOf(owner), ownerBalanceBefore);
+        assertEq(token.balanceOf(recipient), recipientBalanceBefore);
+
+        // Verify nonce is not used
+        assertFalse(token.authorizationState(owner, nonce));
+    }
+
+    function test_CancelAuthorizatioWhenEIP7598Disabled() public {
+        bytes32 nonce = keccak256(abi.encodePacked(owner, spender, uint256(11)));
+       
+        vm.prank(owner);
+        token.disableEIP7598();
+
+        vm.prank(owner);
+        token.cancelAuthorization(owner, nonce);
+
+         // Verify nonce is marked as used
+        assertTrue(token.authorizationState(owner, nonce));
+
+    }
+    
 }

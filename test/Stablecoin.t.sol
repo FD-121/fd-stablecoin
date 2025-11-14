@@ -317,6 +317,14 @@ contract StablecoinTest is Test {
         assertEq(token.allowance(owner, spender), 1e18);
     }
 
+    function test_EIP7598Enabled() public {
+        assertTrue(token.eip7598EnableFlag());
+
+        vm.prank(owner);
+        token.disableEIP7598();
+        assertFalse(token.eip7598EnableFlag());
+    }
+
     function testRevert_PauseIncreaseAllowance() public {
         vm.prank(owner);
         token.pause();
