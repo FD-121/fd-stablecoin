@@ -237,5 +237,5 @@ contract StablecoinV2 is Stablecoin {
      * @dev Gap for future upgrades
      * Total storage slots: 50 - 1 (mapping) = 49
      */
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 }
