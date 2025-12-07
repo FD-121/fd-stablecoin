@@ -422,7 +422,7 @@ contract EIP7598Test is Test {
 
         // Attempt transfer - should fail because account is frozen
         vm.prank(spender);
-        vm.expectRevert("EIP7598 is disalbed");
+        vm.expectRevert("EIP7598 is disabled");
         token.transferWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, signature);
     }
 
@@ -463,7 +463,7 @@ contract EIP7598Test is Test {
 
         //even if payee can not use authorization
         vm.prank(recipient);
-        vm.expectRevert("EIP7598 is disalbed");
+        vm.expectRevert("EIP7598 is disabled");
         token.receiveWithAuthorization(owner, recipient, amount, validAfter, validBefore, nonce, signature);
 
         // Verify balances

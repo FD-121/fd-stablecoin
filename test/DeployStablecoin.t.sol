@@ -39,13 +39,11 @@ contract DeployStablecoinTest is Test {
         newImpl = new StablecoinV2();
         console.log("New Implementation:", address(newImpl));
 
-        // 2️⃣ 构造 initializeV2 的 calldata
         bytes memory initData = abi.encodeWithSelector(
             StablecoinV2.initializeV2.selector,
             NAME
         );
 
-        // 3️⃣ 调用 upgradeAndCall
         proxyAdmin.upgradeAndCall(proxy, address(newImpl), initData);
 
         vm.stopPrank();

@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin-contracts-upgradeable/contracts/utils/cryptography/ECDSAUpgradeable.sol";
-import "openzeppelin-contracts-upgradeable/contracts/utils/AddressUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/contracts/utils/cryptography/SignatureCheckerUpgradeable.sol";
 import "./libraries/EIP7598Constants.sol";
 import "./Stablecoin.sol";
@@ -29,7 +27,7 @@ contract StablecoinV2 is Stablecoin {
      * @dev Throws if eip7598 is disabled.
      */
     modifier eip7598Enabled() {
-        require(eip7598EnableFlag, "EIP7598 is disalbed");
+        require(eip7598EnableFlag, "EIP7598 is disabled");
         _;
     }
     /**
@@ -138,6 +136,36 @@ contract StablecoinV2 is Stablecoin {
     * @param validAfter    The time after which this is valid (unix time)
     * @param validBefore   The time before which this is valid (unix time)
     * @param nonce         Unique nonce
+    * @param v Signature bytes (EOA signature or EIP-1271 contract signature)
+    * @param r Signature bytes (EOA signature or EIP-1271 contract signature)
+    * @param s Signature bytes (EOA signature or EIP-1271 contract signature)
+    */
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v, 
+        bytes32 r, 
+        bytes32 s
+    ) external eip7598Enabled {
+        require(msg.sender == to, "Caller must be the payee");
+        _transferOrReceiveWithAuthorization(EIP7598Constants.RECEIVE_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce, abi.encodePacked(r, s, v));
+    }
+
+     /**
+    * @notice Receive a transfer with a signed authorization from the payer
+    * @dev This has an additional check to ensure that the payee's address matches
+    * the caller of this function to prevent front-running attacks. (See security
+    * considerations)
+    * @param from          Payer's address (Authorizer)
+    * @param to            Payee's address
+    * @param value         Amount to be transferred
+    * @param validAfter    The time after which this is valid (unix time)
+    * @param validBefore   The time before which this is valid (unix time)
+    * @param nonce         Unique nonce
     * @param signature     Unstructured bytes signature signed by an EOA wallet or a contract wallet
     */
     function receiveWithAuthorization(
@@ -152,6 +180,7 @@ contract StablecoinV2 is Stablecoin {
         require(msg.sender == to, "Caller must be the payee");
         _transferOrReceiveWithAuthorization(EIP7598Constants.RECEIVE_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce, signature);
     }
+
 
      /**
      * @dev Check if an authorization has been used
@@ -235,7 +264,7 @@ contract StablecoinV2 is Stablecoin {
 
     /**
      * @dev Gap for future upgrades
-     * Total storage slots: 50 - 1 (mapping) = 49
+     * Total storage slots: 50
      */
-    uint256[48] private __gap;
+    uint256[50] private __gap;
 }

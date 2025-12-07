@@ -19,15 +19,4 @@ library EIP7598Constants {
      */
     bytes32 internal constant RECEIVE_WITH_AUTHORIZATION_TYPEHASH =
         0xd099cc98ef71107a616c4f0f941f04c322d8e254fe26b3c6668db87aae413de8;    
-
-    /**
-     * @dev EIP-1271 magic value for valid signature
-     * bytes4(keccak256("isValidSignature(bytes32,bytes)"))
-     */
-    bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
-
-    /**
-     * @dev EIP-7598 interface ID
-     */
-    bytes4 internal constant EIP7598_INTERFACE_ID = 0x00000000; // Placeholder - update when standardized
 }
