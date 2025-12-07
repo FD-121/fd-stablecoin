@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
@@ -49,13 +49,11 @@ contract EIP7598Test is Test {
         StablecoinV2 newImpl = new StablecoinV2();
         console.log("New Implementation:", address(newImpl));
 
-        // 2️⃣ 构造 initializeV2 的 calldata
         bytes memory initData = abi.encodeWithSelector(
             StablecoinV2.initializeV2.selector,
             NAME
         );
 
-        // 3️⃣ 调用 upgradeAndCall
         proxyAdmin.upgradeAndCall(proxy, address(newImpl), initData);
         
         token = MockERC20(address(proxy));
