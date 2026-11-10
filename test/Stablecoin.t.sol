@@ -1,12 +1,17 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
 
+import "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+import "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "forge-std/Test.sol";
 import "./utils/MockERC20.sol";
 import "./utils/SigUtils.sol";
 
 contract StablecoinTest is Test {
+    string internal constant NAME = "First Digital USD";
+    string internal constant SYMBOL = "FDUSD";
+
     MockERC20 internal token;
     SigUtils internal sigUtils;
     uint256 internal ownerPrivateKey;
@@ -21,11 +26,39 @@ contract StablecoinTest is Test {
         owner = vm.addr(ownerPrivateKey);
         spender = vm.addr(spenderPrivateKey);
 
-        vm.startPrank(owner);
-        token = new MockERC20();
-        sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
+        deployAndUpgradeSmartContract();
 
+        vm.startPrank(owner);
+        sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
         token.mint(1e18);
+        vm.stopPrank();
+    }
+
+    function deployAndUpgradeSmartContract() internal {
+        vm.startPrank(owner);
+
+        Stablecoin impl = new Stablecoin();
+        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(impl),
+            address(proxyAdmin),
+            abi.encodeWithSignature("initialize(string,string)", "Mock Name", "MKT")
+        );
+
+        StablecoinV2 newImpl = new StablecoinV2();
+        console.log("New Implementation:", address(newImpl));
+
+        // 2️⃣ 构造 initializeV2 的 calldata
+        bytes memory initData = abi.encodeWithSelector(
+            StablecoinV2.initializeV2.selector,
+            NAME
+        );
+
+        // 3️⃣ 调用 upgradeAndCall
+        proxyAdmin.upgradeAndCall(proxy, address(newImpl), initData);
+        
+        token = MockERC20(address(proxy));
+
         vm.stopPrank();
     }
 
@@ -94,6 +127,21 @@ contract StablecoinTest is Test {
 
         assertEq(token.balanceOf(owner), 11e18);
         assertEq(token.totalSupply(), 11e18);
+    }
+
+    function test_MintTo() public {
+        vm.prank(owner);
+        token.mint(spender, 10e18);
+
+        assertEq(token.balanceOf(spender), 10e18);
+        assertEq(token.totalSupply(), 11e18);
+
+        vm.prank(owner);
+        token.freeze(spender);
+        
+        vm.prank(owner);
+        vm.expectRevert("Account is frozen");
+        token.mint(spender, 1e18); // source freeze
     }
 
     function testRevert_InvalidMintOwner() public {
@@ -267,6 +315,14 @@ contract StablecoinTest is Test {
         vm.prank(owner);
         token.increaseAllowance(spender, 1e18);
         assertEq(token.allowance(owner, spender), 1e18);
+    }
+
+    function test_EIP7598Enabled() public {
+        assertTrue(token.eip7598EnableFlag());
+
+        vm.prank(owner);
+        token.disableEIP7598();
+        assertFalse(token.eip7598EnableFlag());
     }
 
     function testRevert_PauseIncreaseAllowance() public {
@@ -465,7 +521,7 @@ contract StablecoinTest is Test {
         assertEq(token.allowance(owner, spender), type(uint256).max);
     }
 
-    function testFail_InvalidAllowance() public {
+    function test_RevertInvalidAllowance() public {
         SigUtils.Permit memory permit = SigUtils.Permit({
             owner: owner,
             spender: spender,
@@ -480,10 +536,11 @@ contract StablecoinTest is Test {
         token.permit(permit.owner, permit.spender, permit.value, permit.deadline, v, r, s);
 
         vm.prank(spender);
+        vm.expectRevert("ERC20: insufficient allowance");
         token.transferFrom(owner, spender, 1e18); // attempt to transfer 1 token
     }
 
-    function testFail_InvalidBalance() public {
+    function test_RevertInvalidBalance() public {
         SigUtils.Permit memory permit = SigUtils.Permit({
             owner: owner,
             spender: spender,
@@ -498,6 +555,7 @@ contract StablecoinTest is Test {
         token.permit(permit.owner, permit.spender, permit.value, permit.deadline, v, r, s);
 
         vm.prank(spender);
+        vm.expectRevert("ERC20: transfer amount exceeds balance");
         token.transferFrom(owner, spender, 2e18); // attempt to transfer 2 tokens (owner only owns 1)
     }
 }
